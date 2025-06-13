@@ -1,6 +1,6 @@
 'use client';
 
-import InputField from '@/components/ui/InputField';
+import InputForm from '@/components/ui/InputForm';
 import { chainsToTSender, erc20Abi, tsenderAbi } from '@/constants';
 import { calculateTotal } from '@/utils';
 import { readContract, waitForTransactionReceipt } from '@wagmi/core';
@@ -92,26 +92,29 @@ export default function AirdropForm() {
 
   return (
     <div>
-      <InputField
+      <InputForm
         label="Token Address"
-        placeholder="0x..."
+        placeholder="0x"
         value={tokenAddress}
         onChange={(e) => setTokenAddress(e.target.value)}
       />
-      <InputField
-        label="Recipients"
-        placeholder="0x1234,0x1234234"
+      <InputForm
+        label="Recipients (comma or new line separated)"
+        placeholder="0x123..., 0x456..."
         value={recipientAddress}
         onChange={(e) => setRecipientAddress(e.target.value)}
+        large={true}
       />
-      <InputField
-        label="Amounts"
-        placeholder="0.0"
+      <InputForm
+        label="Amounts (wei; comma or new line separated)"
+        placeholder="100, 200, 300..."
         value={amounts}
         onChange={(e) => setAmounts(e.target.value)}
+        large={true}
       />
+
       <button
-        className="px-6 py-3 
+        className="w-full my-4 px-6 py-3 
         bg-blue-600 hover:bg-blue-700 
         text-white font-medium rounded-lg 
         transition-colors duration-200
