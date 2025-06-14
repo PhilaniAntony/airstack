@@ -1,17 +1,25 @@
 'use client';
 
 import InputForm from '@/components/ui/InputForm';
+import TransactionDetails from '@/components/TransactionDetails';
 import { chainsToTSender, erc20Abi, tsenderAbi } from '@/constants';
 import { calculateTotal } from '@/utils';
 import { readContract, waitForTransactionReceipt } from '@wagmi/core';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { isAddress } from 'viem';
 import { useAccount, useChainId, useConfig, useWriteContract } from 'wagmi';
 
 export default function AirdropForm() {
-  const [tokenAddress, setTokenAddress] = useState('');
-  const [recipientAddress, setRecipientAddress] = useState('');
-  const [amounts, setAmounts] = useState('');
+  const [tokenAddress, setTokenAddress] = usePersistentState(
+    'tokenAddress',
+    ''
+  );
+  const [recipientAddress, setRecipientAddress] = usePersistentState(
+    'recipients',
+    ''
+  );
+  const [amounts, setAmounts] = usePersistentState('amounts', '');
+  const [hasSubmitted, setHasSubmitted] = useState(false);
   const chainId = useChainId();
   const { address: accountAddress } = useAccount();
   const config = useConfig();
@@ -84,14 +92,33 @@ export default function AirdropForm() {
       args: [tokenAddress, recipients, amountList, BigInt(total)],
     });
 
-    const airdropReceipt = await waitForTransactionReceipt(config, {
-      hash: airdropHash,
+    await waitForTransactionReceipt(config, { hash: airdropHash });
+    clearLocalStorage();
+    alert('Airdrop successful!');
+    setHasSubmitted(true);
+  }
+
+  function usePersistentState(key: string, defaultValue: string) {
+    const [value, setValue] = useState(() => {
+      if (typeof window === 'undefined') return defaultValue;
+      return localStorage.getItem(key) || defaultValue;
     });
-    console.log('Airdrop successful:', airdropReceipt);
+
+    useEffect(() => {
+      localStorage.setItem(key, value);
+    }, [key, value]);
+
+    return [value, setValue] as const;
+  }
+
+  function clearLocalStorage() {
+    localStorage.removeItem('tokenAddress');
+    localStorage.removeItem('recipients');
+    localStorage.removeItem('amounts');
   }
 
   return (
-    <div>
+    <div className="container mx-auto mt-5 border border-blue-300 rounded-lg bg-white p-4 shadow-sm ">
       <InputForm
         label="Token Address"
         placeholder="0x"
@@ -112,19 +139,33 @@ export default function AirdropForm() {
         onChange={(e) => setAmounts(e.target.value)}
         large={true}
       />
-
-      <button
-        className="w-full my-4 px-6 py-3 
-        bg-blue-600 hover:bg-blue-700 
-        text-white font-medium rounded-lg 
-        transition-colors duration-200
-        shadow-md hover:shadow-lg
-        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
-        disabled:opacity-50 disabled:cursor-not-allowed"
-        onClick={handleSubmit}
-      >
-        Submit
-      </button>
+      <TransactionDetails
+        tokenName="ERC20 Token"
+        tokenAddress={tokenAddress}
+        recipientCount={recipientAddress.split(/[,\n]+/).length}
+        totalAmount={total}
+      />
+      {hasSubmitted && !hasSufficientBalance ? (
+        <button
+          className="w-full mt-4 mb-4 px-6 py-3 bg-gray-300 text-gray-600 font-medium rounded-lg cursor-not-allowed"
+          disabled
+        >
+          Insufficient token balance
+        </button>
+      ) : (
+        <button
+          className="w-full mt-4 mb-4 px-6 py-3 
+          bg-blue-600 hover:bg-blue-700 
+          text-white font-medium rounded-lg 
+          transition-colors duration-200
+          shadow-md hover:shadow-lg
+          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
+          disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={handleSubmit}
+        >
+          Submit
+        </button>
+      )}
     </div>
   );
 }
