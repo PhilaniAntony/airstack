@@ -7,7 +7,13 @@ import { calculateTotal } from '@/utils';
 import { readContract, waitForTransactionReceipt } from '@wagmi/core';
 import { useMemo, useState, useEffect } from 'react';
 import { isAddress } from 'viem';
-import { useAccount, useChainId, useConfig, useWriteContract } from 'wagmi';
+import {
+  useAccount,
+  useChainId,
+  useConfig,
+  useWriteContract,
+  useReadContract,
+} from 'wagmi';
 
 export default function AirdropForm() {
   const [tokenAddress, setTokenAddress] = usePersistentState(
@@ -20,6 +26,7 @@ export default function AirdropForm() {
   );
   const [amounts, setAmounts] = usePersistentState('amounts', '');
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [hasSufficientBalance, setHasSufficientBalance] = useState(true);
   const chainId = useChainId();
   const { address: accountAddress } = useAccount();
   const config = useConfig();
@@ -117,6 +124,33 @@ export default function AirdropForm() {
     localStorage.removeItem('amounts');
   }
 
+  const { data: erc20TokenName } = useReadContract({
+    abi: erc20Abi,
+    address: tokenAddress as `0x${string}`,
+    functionName: 'name',
+  });
+
+  const { data: erc20TokenTotalDecimals } = useReadContract({
+    abi: erc20Abi,
+    address: tokenAddress as `0x${string}`,
+    functionName: 'decimals',
+  });
+
+  const { data: erc20TokenBalance } = useReadContract({
+    abi: erc20Abi,
+    address: tokenAddress as `0x${string}`,
+    functionName: 'balanceOf',
+    args: [accountAddress],
+  });
+
+  useEffect(() => {
+    if (erc20TokenBalance && erc20TokenTotalDecimals) {
+      const balance =
+        Number(erc20TokenBalance) / Math.pow(10, erc20TokenTotalDecimals);
+      setHasSufficientBalance(balance >= total);
+    }
+  }, [erc20TokenBalance, erc20TokenTotalDecimals, total]);
+
   return (
     <div className="container mx-auto mt-5 border border-blue-300 rounded-lg bg-white p-4 shadow-sm ">
       <InputForm
@@ -140,7 +174,7 @@ export default function AirdropForm() {
         large={true}
       />
       <TransactionDetails
-        tokenName="ERC20 Token"
+        tokenName={erc20TokenName || 'ERC20 Token'}
         tokenAddress={tokenAddress}
         recipientCount={recipientAddress.split(/[,\n]+/).length}
         totalAmount={total}
