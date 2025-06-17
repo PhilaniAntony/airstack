@@ -1,18 +1,18 @@
 'use client';
 
-import InputForm from '@/components/ui/InputForm';
 import TransactionDetails from '@/components/TransactionDetails';
+import InputForm from '@/components/ui/InputForm';
 import { chainsToTSender, erc20Abi, tsenderAbi } from '@/constants';
 import { calculateTotal } from '@/utils';
 import { readContract, waitForTransactionReceipt } from '@wagmi/core';
-import { useMemo, useState, useEffect } from 'react';
-import { isAddress } from 'viem';
+import { useEffect, useMemo, useState } from 'react';
+import { formatUnits, isAddress } from 'viem';
 import {
   useAccount,
   useChainId,
   useConfig,
-  useWriteContract,
   useReadContract,
+  useWriteContract,
 } from 'wagmi';
 
 export default function AirdropForm() {
@@ -128,26 +128,38 @@ export default function AirdropForm() {
     abi: erc20Abi,
     address: tokenAddress as `0x${string}`,
     functionName: 'name',
-  });
-
-  const { data: erc20TokenTotalDecimals } = useReadContract({
-    abi: erc20Abi,
-    address: tokenAddress as `0x${string}`,
-    functionName: 'decimals',
-  });
+  }) as { data?: string };
 
   const { data: erc20TokenBalance } = useReadContract({
     abi: erc20Abi,
     address: tokenAddress as `0x${string}`,
     functionName: 'balanceOf',
-    args: [accountAddress],
-  });
+    args: [accountAddress as `0x${string}`],
+  }) as { data?: bigint };
+
+  const { data: erc20TokenTotalDecimals } = useReadContract({
+    abi: erc20Abi,
+    address: tokenAddress as `0x${string}`,
+    functionName: 'decimals',
+  }) as { data?: number };
 
   useEffect(() => {
-    if (erc20TokenBalance && erc20TokenTotalDecimals) {
-      const balance =
-        Number(erc20TokenBalance) / Math.pow(10, erc20TokenTotalDecimals);
+    if (
+      erc20TokenBalance === undefined ||
+      erc20TokenTotalDecimals === undefined
+    ) {
+      setHasSufficientBalance(false);
+      return;
+    }
+
+    try {
+      const balance = parseFloat(
+        formatUnits(erc20TokenBalance, erc20TokenTotalDecimals)
+      );
       setHasSufficientBalance(balance >= total);
+    } catch (error) {
+      console.error('Error formatting balance:', error);
+      setHasSufficientBalance(false);
     }
   }, [erc20TokenBalance, erc20TokenTotalDecimals, total]);
 

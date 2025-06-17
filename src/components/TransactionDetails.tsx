@@ -1,7 +1,5 @@
-import React from 'react';
-
 type Props = {
-  tokenName: string;
+  tokenName?: string;
   tokenAddress: string;
   recipientCount: number;
   totalAmount: number;

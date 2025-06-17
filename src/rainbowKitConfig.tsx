@@ -1,57 +1,59 @@
 'use client';
 
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
-import { http } from 'viem';
+import { Chain, http } from 'viem';
 import { anvil, mainnet, sepolia, zksync } from 'wagmi/chains';
 
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
 if (!projectId) {
-  throw new Error(
-    'NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID is not set in environment variables'
-  );
+  throw new Error('NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID is not set');
 }
+
 const alchemyApikey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY;
 if (!alchemyApikey) {
-  throw new Error(
-    'NEXT_PUBLIC_ALCHEMY_API_KEY is not set in environment variables'
-  );
+  throw new Error('NEXT_PUBLIC_ALCHEMY_API_KEY is not set');
 }
 
-// Define custom RPC URLs (use environment variables in production)
-const RPC_URLS = {
-  [mainnet.id]: 'https://eth-mainnet.g.alchemy.com/v2/' + alchemyApikey,
-  [sepolia.id]: 'https://eth-sepolia.g.alchemy.com/v2/' + alchemyApikey,
-  [zksync.id]: 'https://zksync-mainnet.g.alchemy.com/v2/' + alchemyApikey,
-  [anvil.id]: 'http://localhost:8545',
-};
-
-const configuredChains = [
+// Define chains with proper typing
+const configuredChains: Chain[] = [
   {
     ...anvil,
     rpcUrls: {
-      default: { http: [RPC_URLS[anvil.id]] },
-      public: { http: [RPC_URLS[anvil.id]] },
+      default: { http: ['http://localhost:8545'] },
+      public: { http: ['http://localhost:8545'] },
     },
   },
   {
     ...zksync,
     rpcUrls: {
-      default: { http: [RPC_URLS[zksync.id]] },
-      public: { http: [RPC_URLS[zksync.id]] },
+      default: {
+        http: [`https://zksync-mainnet.g.alchemy.com/v2/${alchemyApikey}`],
+      },
+      public: {
+        http: [`https://zksync-mainnet.g.alchemy.com/v2/${alchemyApikey}`],
+      },
     },
   },
   {
     ...mainnet,
     rpcUrls: {
-      default: { http: [RPC_URLS[mainnet.id]] },
-      public: { http: [RPC_URLS[mainnet.id]] },
+      default: {
+        http: [`https://eth-mainnet.g.alchemy.com/v2/${alchemyApikey}`],
+      },
+      public: {
+        http: [`https://eth-mainnet.g.alchemy.com/v2/${alchemyApikey}`],
+      },
     },
   },
   {
     ...sepolia,
     rpcUrls: {
-      default: { http: [RPC_URLS[sepolia.id]] },
-      public: { http: [RPC_URLS[sepolia.id]] },
+      default: {
+        http: [`https://eth-sepolia.g.alchemy.com/v2/${alchemyApikey}`],
+      },
+      public: {
+        http: [`https://eth-sepolia.g.alchemy.com/v2/${alchemyApikey}`],
+      },
     },
   },
 ];
@@ -59,9 +61,14 @@ const configuredChains = [
 export default getDefaultConfig({
   appName: 'Airstack | Token Airdrop Automation Platform',
   projectId,
-  chains: configuredChains,
+  chains: configuredChains as [Chain, ...Chain[]],
   ssr: false,
-  transports: Object.fromEntries(
-    configuredChains.map((chain) => [chain.id, http(RPC_URLS[chain.id])])
-  ),
+  transports: {
+    [anvil.id]: http('http://localhost:8545'),
+    [zksync.id]: http(
+      `https://zksync-mainnet.g.alchemy.com/v2/${alchemyApikey}`
+    ),
+    [mainnet.id]: http(`https://eth-mainnet.g.alchemy.com/v2/${alchemyApikey}`),
+    [sepolia.id]: http(`https://eth-sepolia.g.alchemy.com/v2/${alchemyApikey}`),
+  },
 });
